@@ -1,3 +1,12 @@
+"""
+PDF Toolbox Backend API
+-----------------------
+This is the FastAPI backend service for the PDF Toolbox application.
+It provides RESTful APIs for:
+1. Merging multiple PDFs into one document.
+2. Converting Images and Office documents (Word, Excel, PPT) to PDF.
+3. Extracting specific pages from a PDF.
+"""
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pypdf import PdfWriter, PdfReader
