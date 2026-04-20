@@ -4,7 +4,7 @@ PDF Toolbox Backend API
 This is the FastAPI backend service for the PDF Toolbox application.
 It provides RESTful APIs for:
 1. Merging multiple PDFs into one document.
-2. Converting Images and Office documents (Word, Excel, PPT) to PDF.
+2. Converting Images to PDF.
 3. Extracting specific pages from a PDF.
 """
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Response
@@ -14,7 +14,6 @@ from pypdf.errors import PdfReadError
 from PIL import Image, UnidentifiedImageError
 import os
 import io
-import tempfile
 
 app = FastAPI()
 
@@ -55,7 +54,7 @@ def merge_pdfs(files: list[UploadFile] = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal error during merging.")
 
-# 2. Universal File to PDF Endpoint
+# 2. Image to PDF Endpoint
 @app.post("/convert/")
 def convert_file_to_pdf(file: UploadFile = File(...)):
     try:
@@ -76,62 +75,6 @@ def convert_file_to_pdf(file: UploadFile = File(...)):
             
             return Response(
                 content=output_pdf.getvalue(),
-                media_type="application/pdf",
-                headers={"Content-Disposition": f"attachment; filename={output_filename}"}
-            )
-            
-        # --- 支持 Office 全家桶 (Word, Excel, PPT) 转换 ---
-        elif ext in ['docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt']:
-            # Office 转换必须落地到硬盘，且路径必须是绝对路径
-            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp_in:
-                tmp_in.write(file.file.read())
-                tmp_in_path = os.path.abspath(tmp_in.name)
-            
-            tmp_out_path = tmp_in_path.replace(".docx", ".pdf")
-            tmp_out_path = os.path.abspath(tmp_in_path.rsplit('.', 1)[0] + ".pdf")
-            
-            try:
-                if ext in ['docx', 'doc']:
-                    from docx2pdf import convert as docx_convert
-                    docx_convert(tmp_in_path, tmp_out_path)
-                    
-                elif ext in ['xlsx', 'xls']:
-                    import pythoncom
-                    import win32com.client
-                    pythoncom.CoInitialize() # 在多线程中调用 Windows COM 必须初始化
-                    try:
-                        excel = win32com.client.Dispatch("Excel.Application")
-                        excel.Visible = False
-                        wb = excel.Workbooks.Open(tmp_in_path)
-                        wb.ExportAsFixedFormat(0, tmp_out_path) # 0 代表 xlTypePDF
-                        wb.Close(False)
-                        excel.Quit()
-                    finally:
-                        pythoncom.CoUninitialize()
-                        
-                elif ext in ['pptx', 'ppt']:
-                    import pythoncom
-                    import win32com.client
-                    pythoncom.CoInitialize()
-                    try:
-                        powerpoint = win32com.client.Dispatch("Powerpoint.Application")
-                        presentation = powerpoint.Presentations.Open(tmp_in_path, WithWindow=False)
-                        presentation.SaveAs(tmp_out_path, 32) # 32 代表 ppSaveAsPDF
-                        presentation.Close()
-                        powerpoint.Quit()
-                    finally:
-                        pythoncom.CoUninitialize()
-
-                # 读取生成的 PDF
-                with open(tmp_out_path, "rb") as f:
-                    pdf_data = f.read()
-            finally:
-                # 使用 finally 确保无论转换成功还是报错，临时文件都会被清理
-                if os.path.exists(tmp_in_path): os.remove(tmp_in_path)
-                if os.path.exists(tmp_out_path): os.remove(tmp_out_path)
-
-            return Response(
-                content=pdf_data,
                 media_type="application/pdf",
                 headers={"Content-Disposition": f"attachment; filename={output_filename}"}
             )
