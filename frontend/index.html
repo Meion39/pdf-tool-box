@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My PDF Toolbox</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        /* Reset margins and set up full-screen flex layout */
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; background-color: #1e1e1e; color: white; }
+        
+        /* Sidebar Styles */
+        .sidebar { width: 250px; background-color: #252526; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.5); z-index: 10; }
+        .sidebar h2 { text-align: center; margin: 30px 0; font-size: 24px; color: #fff; letter-spacing: 1px;}
+        .nav-btn { background: none; border: none; color: #aaa; padding: 18px 25px; text-align: left; font-size: 16px; cursor: pointer; transition: all 0.2s; border-left: 4px solid transparent; }
+        .nav-btn:hover { background-color: #333333; color: #fff; }
+        .nav-btn.active { background-color: #37373d; color: #fff; border-left: 4px solid #007acc; font-weight: bold; }
+        
+        /* Main Content Styles */
+        .main-content { flex: 1; padding: 50px; overflow-y: auto; background-color: #1e1e1e; }
+        
+        /* View Switching Logic */
+        .view { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Tool Box Styles (from previous step) */
+        .tool-header { margin-bottom: 30px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .tool-box { border: 2px dashed #666; padding: 40px; width: 400px; background-color: #2d2d2d; border-radius: 12px; margin-top: 20px; transition: all 0.3s;}
+        .tool-box.dragover { background-color: #383838; border-color: #007acc; transform: scale(1.02); }
+        input[type="file"] { margin-bottom: 15px; width: 100%; color: #ccc;}
+        button.action-btn { margin-top: 15px; padding: 12px 20px; cursor: pointer; background-color: #007acc; color: white; border: none; border-radius: 6px; font-size: 16px; width: 100%; transition: 0.2s;}
+        button.action-btn:hover { background-color: #005f9e; }
+        button.action-btn:disabled { background-color: #555; cursor: not-allowed; opacity: 0.7; }
+        .status { margin-top: 20px; font-weight: bold; min-height: 20px; font-size: 14px;}
+        .file-item { padding: 10px; margin-bottom: 8px; background: #3a3a3a; border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: 0.2s; font-size: 13px; color: #ddd;}
+        .file-item:active { cursor: grabbing; }
+        .remove-btn { color: #f44336; cursor: pointer; padding: 0 5px; font-weight: bold; font-size: 14px;}
+        .remove-btn:hover { color: #ff6659; }
+
+        /* PDF Preview Grid Styles */
+        .pdf-preview-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-top: 20px; max-height: 400px; overflow-y: auto; padding: 15px; background: #222; border-radius: 8px; border: 1px solid #444; }
+        .page-thumbnail { position: relative; cursor: pointer; border: 3px solid transparent; border-radius: 6px; transition: 0.2s; overflow: hidden; background: #fff; }
+        .page-thumbnail:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        .page-thumbnail.selected { border-color: #007acc; }
+        .page-thumbnail.selected::after { content: '✔'; position: absolute; top: 8px; right: 8px; background: #007acc; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
+        .page-thumbnail canvas { width: 100%; height: auto; display: block; }
+        .page-number-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); color: white; text-align: center; font-size: 13px; padding: 4px 0; font-weight: bold;}
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>📄 PDF Tools</h2>
+        <button class="nav-btn active" onclick="switchView('merge-view', this)">Merge PDFs</button>
+        <button class="nav-btn" onclick="switchView('convert-view', this)">File to PDF</button>
+        <button class="nav-btn" onclick="switchView('extract-view', this)">Extract Pages</button>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="merge-view" class="view active">
+            <h1 class="tool-header">Merge PDF Files</h1>
+            <p style="color: #aaa;">Combine multiple PDFs into a single document easily.</p>
+            <div id="mergeBox" class="tool-box">
+                <input type="file" id="pdfFiles" accept="application/pdf" multiple onchange="handleFileInput(event)">
+                <div id="fileListPreview" style="margin-bottom: 15px; max-height: 200px; overflow-y: auto;"></div>
+                <button id="mergeBtn" class="action-btn" onclick="mergePDFs()">Start Merging</button>
+                <p id="mergeStatus" class="status"></p>
+            </div>
+        </div>
+
+        <div id="convert-view" class="view">
+            <h1 class="tool-header">Convert File to PDF</h1>
+            <p style="color: #aaa;">Convert Images, Word (DOCX), Excel (XLSX), or PowerPoint (PPTX) into PDF.</p>
+            <div id="convertBox" class="tool-box">
+                <input type="file" id="convertFile" accept="image/*, .doc, .docx, .xls, .xlsx, .ppt, .pptx">
+                <button id="convertBtn" class="action-btn" onclick="convertFile()">Convert to PDF</button>
+                <p id="convertStatus" class="status"></p>
+            </div>
+        </div>
+
+        <div id="extract-view" class="view">
+            <h1 class="tool-header">Extract PDF Pages</h1>
+            <p style="color: #aaa;">Select a PDF to preview and click the thumbnails of the pages you want to extract.</p>
+            <div id="extractBox" class="tool-box" style="width: 100%; max-width: 650px;">
+                <input type="file" id="extractFile" accept="application/pdf" onchange="loadPdfPreview(event)">
+                <div id="pdfThumbnails" class="pdf-preview-grid"></div>
+                <button id="extractBtn" class="action-btn" onclick="extractPages()" style="display: none;">Extract Selected Pages</button>
+                <p id="extractStatus" class="status"></p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 全局配置 ---
+        // TODO: 等后端部署到云服务器后，将这里的地址改为云服务器的网址（例如：https://my-pdf-backend.onrender.com）
+        const API_BASE_URL = "http://127.0.0.1:8000";
+
+        // --- 视图切换逻辑 ---
+        function switchView(viewId, btnElement) {
+            // 1. 隐藏所有 view
+            document.querySelectorAll('.view').forEach(view => {
+                view.classList.remove('active');
+            });
+            // 2. 显示点击的 view
+            document.getElementById(viewId).classList.add('active');
+
+            // 3. 移除所有按钮的 active 状态
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // 4. 给当前点击的按钮加上 active 状态
+            btnElement.classList.add('active');
+        }
+
+        // --- 全局变量管理文件状态 ---
+        let selectedPdfFiles = [];
+        let draggedIndex = null;
+        let selectedPagesToExtract = new Set();
+
+        // Setup PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // --- 拖拽上传功能初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setupDragAndDrop('mergeBox', (files) => {
+                addFilesToMerge(files);
+            });
+            
+            setupDragAndDrop('convertBox', (files) => {
+                const fileInput = document.getElementById('convertFile');
+                const dt = new DataTransfer();
+                dt.items.add(files[0]); // 仅支持单文件转换
+                fileInput.files = dt.files;
+            });
+
+            setupDragAndDrop('extractBox', (files) => {
+                const fileInput = document.getElementById('extractFile');
+                const dt = new DataTransfer();
+                if (files[0].type === 'application/pdf') {
+                    dt.items.add(files[0]); fileInput.files = dt.files;
+                    loadPdfPreview({ target: fileInput });
+                }
+            });
+        });
+
+        function setupDragAndDrop(boxId, dropHandler) {
+            const box = document.getElementById(boxId);
+            box.addEventListener('dragover', (e) => { 
+                e.preventDefault(); 
+                box.classList.add('dragover'); 
+            });
+            box.addEventListener('dragleave', () => box.classList.remove('dragover'));
+            box.addEventListener('drop', (e) => {
+                e.preventDefault();
+                box.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    dropHandler(e.dataTransfer.files);
+                }
+            });
+        }
+
+        // --- 提取选中的 PDF 文件 ---
+        function handleFileInput(event) {
+            if (event.target.files) {
+                addFilesToMerge(event.target.files);
+                event.target.value = ''; // 清空 input 允许重复选同一个文件
+            }
+        }
+
+        function addFilesToMerge(files) {
+            for (let file of files) {
+                if (file.type === 'application/pdf') {
+                    selectedPdfFiles.push(file);
+                }
+            }
+            renderMergeList();
+        }
+
+        function removePdf(index) {
+            selectedPdfFiles.splice(index, 1);
+            renderMergeList();
+        }
+
+        // --- 渲染可拖拽的排序列表 ---
+        function renderMergeList() {
+            const preview = document.getElementById('fileListPreview');
+            if (selectedPdfFiles.length === 0) {
+                preview.innerHTML = '';
+                return;
+            }
+            
+            let html = '<ul style="margin: 0; padding: 0; list-style: none;">';
+            selectedPdfFiles.forEach((file, index) => {
+                html += `
+                    <li class="file-item" draggable="true" data-index="${index}">
+                        <span><span style="color:#888;margin-right:10px;cursor:grab;">☰</span>${file.name}</span>
+                        <span class="remove-btn" onclick="removePdf(${index})">✖</span>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            preview.innerHTML = html;
+
+            // 绑定拖拽排序事件
+            const items = preview.querySelectorAll('.file-item');
+            items.forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    draggedIndex = +this.getAttribute('data-index');
+                    e.dataTransfer.effectAllowed = 'move';
+                    setTimeout(() => this.style.opacity = '0.4', 0);
+                });
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.style.borderTop = '2px solid #007acc';
+                });
+                item.addEventListener('dragleave', function(e) {
+                    this.style.borderTop = '1px solid transparent';
+                });
+                item.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.style.borderTop = '1px solid transparent';
+                    const targetIndex = +this.getAttribute('data-index');
+                    if (draggedIndex !== targetIndex && draggedIndex !== null) {
+                        const draggedFile = selectedPdfFiles.splice(draggedIndex, 1)[0];
+                        selectedPdfFiles.splice(targetIndex, 0, draggedFile);
+                        renderMergeList();
+                    }
+                });
+                item.addEventListener('dragend', function() {
+                    this.style.opacity = '1';
+                });
+            });
+        }
+
+        // --- 全局交叉观察者与渲染器 ---
+        let currentPdfObserver = null;
+
+        async function renderPage(pdf, pageNum, thumbDiv) {
+            // 防止重复渲染
+            if (thumbDiv.dataset.rendered === 'true') return;
+            thumbDiv.dataset.rendered = 'true';
+
+            try {
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 0.5 });
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                
+                // 将画好的 canvas 插入到 thumbDiv 中（保证在 label 前面）
+                thumbDiv.insertBefore(canvas, thumbDiv.firstChild);
+                // 移除初期的占位骨架高度
+                thumbDiv.style.minHeight = 'auto';
+            } catch (error) {
+                console.error(`Error rendering page ${pageNum}:`, error);
+            }
+        }
+
+        // --- PDF 页面预览逻辑 ---
+        async function loadPdfPreview(event) {
+            const file = event.target.files ? event.target.files[0] : null;
+            if (!file || file.type !== 'application/pdf') return;
+
+            const grid = document.getElementById('pdfThumbnails');
+            const extractBtn = document.getElementById('extractBtn');
+            const statusText = document.getElementById('extractStatus');
+            
+            grid.innerHTML = '<div style="color: #ccc; padding: 20px; grid-column: 1 / -1; text-align: center;">Rendering preview, please wait...</div>';
+            grid.style.display = 'grid';
+            extractBtn.style.display = 'none';
+            statusText.innerText = '';
+            selectedPagesToExtract.clear();
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                grid.innerHTML = ''; // 清空提示
+
+                // 1. 如果之前有观察者，先切断它，防止内存泄漏
+                if (currentPdfObserver) currentPdfObserver.disconnect();
+                
+                // 2. 创建一个新的观察者
+                currentPdfObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) { // 当占位框进入视野时
+                            const thumbDiv = entry.target;
+                            const pageNum = parseInt(thumbDiv.dataset.pageNum);
+                            renderPage(pdf, pageNum, thumbDiv); // 渲染画面
+                            observer.unobserve(thumbDiv); // 画完后就不再观察了
+                        }
+                    });
+                }, { root: grid, rootMargin: '200px' }); // 提前 200px 开始加载，让滚动更平滑
+
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const thumbDiv = document.createElement('div');
+                    thumbDiv.className = 'page-thumbnail';
+                    thumbDiv.dataset.pageNum = pageNum;
+                    thumbDiv.style.minHeight = '160px'; // 懒加载时的灰色骨架高度
+                    thumbDiv.onclick = () => togglePageSelection(pageNum, thumbDiv);
+                    
+                    const label = document.createElement('div');
+                    label.className = 'page-number-label';
+                    label.innerText = `Page ${pageNum}`;
+
+                    thumbDiv.appendChild(label);
+                    grid.appendChild(thumbDiv);
+
+                    // 把生成的空骨架框交给观察者盯着
+                    currentPdfObserver.observe(thumbDiv);
+                }
+                extractBtn.style.display = 'block';
+            } catch (error) {
+                grid.innerHTML = `<div style="color: #f44336; grid-column: 1 / -1;">Failed to load PDF preview: ${error.message}</div>`;
+            }
+        }
+
+        function togglePageSelection(pageNum, element) {
+            if (selectedPagesToExtract.has(pageNum)) {
+                selectedPagesToExtract.delete(pageNum);
+                element.classList.remove('selected');
+            } else {
+                selectedPagesToExtract.add(pageNum);
+                element.classList.add('selected');
+            }
+        }
+
+        // --- Merge PDFs Function (逻辑不变) ---
+        async function mergePDFs() {
+            const files = selectedPdfFiles;
+            const statusText = document.getElementById('mergeStatus');
+            const mergeBtn = document.getElementById('mergeBtn');
+
+            if (files.length < 2) {
+                alert("Please select at least 2 PDF files to merge.");
+                return;
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append("files", files[i]); 
+            }
+
+            statusText.innerText = "Merging in progress, please wait...";
+            statusText.style.color = "#ffeb3b"; 
+            
+            mergeBtn.disabled = true;
+            mergeBtn.innerText = "Processing...";
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/merge/`, {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || "Merge failed");
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "Merged_Document.pdf";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url); 
+
+                statusText.innerText = "🎉 Success! File downloaded.";
+                statusText.style.color = "#4CAF50"; 
+
+            } catch (error) {
+                statusText.innerText = `❌ Error: ${error.message}`;
+                statusText.style.color = "#f44336"; 
+                console.error("Error:", error);
+            } finally {
+                mergeBtn.disabled = false;
+                mergeBtn.innerText = "Start Merging";
+            }
+        }
+
+        // --- File to PDF Function ---
+        async function convertFile() {
+            const fileInput = document.getElementById('convertFile');
+            const file = fileInput.files[0];
+            const statusText = document.getElementById('convertStatus');
+            const convertBtn = document.getElementById('convertBtn');
+
+            if (!file) {
+                alert("Please select a file first.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            statusText.innerText = "Converting file, please wait...";
+            statusText.style.color = "#ffeb3b"; 
+            
+            convertBtn.disabled = true;
+            convertBtn.innerText = "Converting...";
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/convert/`, {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || "Conversion failed");
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const originalName = file.name.split('.')[0];
+                a.download = `converted_${originalName}.pdf`;
+                
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url); 
+
+                statusText.innerText = "🎉 Success! File converted.";
+                statusText.style.color = "#4CAF50"; 
+
+            } catch (error) {
+                statusText.innerText = `❌ Error: ${error.message}`;
+                statusText.style.color = "#f44336"; 
+                console.error("Error:", error);
+            } finally {
+                convertBtn.disabled = false;
+                convertBtn.innerText = "Convert to PDF";
+            }
+        }
+
+        // --- Extract PDF Pages Function ---
+        async function extractPages() {
+            const fileInput = document.getElementById('extractFile');
+            const file = fileInput.files[0];
+            const pagesArray = Array.from(selectedPagesToExtract).sort((a, b) => a - b);
+            const pages = pagesArray.join(',');
+            const statusText = document.getElementById('extractStatus');
+            const extractBtn = document.getElementById('extractBtn');
+
+            if (!file) {
+                alert("Please select a PDF file first."); return;
+            }
+            if (pagesArray.length === 0) {
+                alert("Please click on the thumbnails to select at least one page to extract."); return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("pages", pages);
+
+            statusText.innerText = "Extracting pages, please wait...";
+            statusText.style.color = "#ffeb3b"; 
+            
+            extractBtn.disabled = true;
+            extractBtn.innerText = "Extracting...";
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/extract/`, {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || "Extraction failed");
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const originalName = file.name.split('.')[0];
+                a.download = `extracted_${originalName}.pdf`;
+                document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url); 
+
+                statusText.innerText = "🎉 Success! Pages extracted."; statusText.style.color = "#4CAF50"; 
+            } catch (error) {
+                statusText.innerText = `❌ Error: ${error.message}`; statusText.style.color = "#f44336"; 
+            } finally {
+                extractBtn.disabled = false; extractBtn.innerText = "Extract Selected Pages";
+            }
+        }
+    </script>
+</body>
+</html>
