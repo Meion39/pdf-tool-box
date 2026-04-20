@@ -102,28 +102,27 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
     </div>
 
     <script>
-        // --- 全局配置 ---
-        // TODO: 等后端部署到云服务器后，将这里的地址改为云服务器的网址（例如：https://my-pdf-backend.onrender.com）
-        const API_BASE_URL = "http://127.0.0.1:8000";
+        // --- Global Configuration ---
+        const API_BASE_URL = "https://pdf-tool-box.onrender.com";
 
-        // --- 视图切换逻辑 ---
+        // --- View Switching Logic ---
         function switchView(viewId, btnElement) {
-            // 1. 隐藏所有 view
+            // 1. Hide all views
             document.querySelectorAll('.view').forEach(view => {
                 view.classList.remove('active');
             });
-            // 2. 显示点击的 view
+            // 2. Show the clicked view
             document.getElementById(viewId).classList.add('active');
 
-            // 3. 移除所有按钮的 active 状态
+            // 3. Remove active state from all buttons
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            // 4. 给当前点击的按钮加上 active 状态
+            // 4. Add active state to the current button
             btnElement.classList.add('active');
         }
 
-        // --- 全局变量管理文件状态 ---
+        // --- Global State Management ---
         let selectedPdfFiles = [];
         let draggedIndex = null;
         let selectedPagesToExtract = new Set();
@@ -131,7 +130,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
         // Setup PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // --- 拖拽上传功能初始化 ---
+        // --- Drag and Drop Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             setupDragAndDrop('mergeBox', (files) => {
                 addFilesToMerge(files);
@@ -140,7 +139,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             setupDragAndDrop('convertBox', (files) => {
                 const fileInput = document.getElementById('convertFile');
                 const dt = new DataTransfer();
-                dt.items.add(files[0]); // 仅支持单文件转换
+                dt.items.add(files[0]); // Only single file conversion is supported
                 fileInput.files = dt.files;
             });
 
@@ -170,11 +169,11 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             });
         }
 
-        // --- 提取选中的 PDF 文件 ---
+        // --- Handle Selected PDF Files ---
         function handleFileInput(event) {
             if (event.target.files) {
                 addFilesToMerge(event.target.files);
-                event.target.value = ''; // 清空 input 允许重复选同一个文件
+                event.target.value = ''; // Clear input to allow selecting the same file again
             }
         }
 
@@ -192,7 +191,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             renderMergeList();
         }
 
-        // --- 渲染可拖拽的排序列表 ---
+        // --- Render Draggable Sortable List ---
         function renderMergeList() {
             const preview = document.getElementById('fileListPreview');
             if (selectedPdfFiles.length === 0) {
@@ -212,7 +211,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             html += '</ul>';
             preview.innerHTML = html;
 
-            // 绑定拖拽排序事件
+            // Bind drag and sort events
             const items = preview.querySelectorAll('.file-item');
             items.forEach(item => {
                 item.addEventListener('dragstart', function(e) {
@@ -243,11 +242,11 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             });
         }
 
-        // --- 全局交叉观察者与渲染器 ---
+        // --- Global Intersection Observer & Renderer ---
         let currentPdfObserver = null;
 
         async function renderPage(pdf, pageNum, thumbDiv) {
-            // 防止重复渲染
+            // Prevent re-rendering
             if (thumbDiv.dataset.rendered === 'true') return;
             thumbDiv.dataset.rendered = 'true';
 
@@ -262,16 +261,16 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
 
                 await page.render({ canvasContext: ctx, viewport: viewport }).promise;
                 
-                // 将画好的 canvas 插入到 thumbDiv 中（保证在 label 前面）
+                // Insert the rendered canvas into thumbDiv (before the label)
                 thumbDiv.insertBefore(canvas, thumbDiv.firstChild);
-                // 移除初期的占位骨架高度
+                // Remove the initial placeholder height
                 thumbDiv.style.minHeight = 'auto';
             } catch (error) {
                 console.error(`Error rendering page ${pageNum}:`, error);
             }
         }
 
-        // --- PDF 页面预览逻辑 ---
+        // --- PDF Page Preview Logic ---
         async function loadPdfPreview(event) {
             const file = event.target.files ? event.target.files[0] : null;
             if (!file || file.type !== 'application/pdf') return;
@@ -289,28 +288,28 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-                grid.innerHTML = ''; // 清空提示
+                grid.innerHTML = ''; // Clear the loading message
 
-                // 1. 如果之前有观察者，先切断它，防止内存泄漏
+                // 1. If an observer exists, disconnect it to prevent memory leaks
                 if (currentPdfObserver) currentPdfObserver.disconnect();
                 
-                // 2. 创建一个新的观察者
+                // 2. Create a new observer
                 currentPdfObserver = new IntersectionObserver((entries, observer) => {
                     entries.forEach(entry => {
-                        if (entry.isIntersecting) { // 当占位框进入视野时
+                        if (entry.isIntersecting) { // When the placeholder enters the viewport
                             const thumbDiv = entry.target;
                             const pageNum = parseInt(thumbDiv.dataset.pageNum);
-                            renderPage(pdf, pageNum, thumbDiv); // 渲染画面
-                            observer.unobserve(thumbDiv); // 画完后就不再观察了
+                            renderPage(pdf, pageNum, thumbDiv); // Render the page
+                            observer.unobserve(thumbDiv); // Stop observing after rendering
                         }
                     });
-                }, { root: grid, rootMargin: '200px' }); // 提前 200px 开始加载，让滚动更平滑
+                }, { root: grid, rootMargin: '200px' }); // Start loading 200px ahead for a smoother scroll
 
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                     const thumbDiv = document.createElement('div');
                     thumbDiv.className = 'page-thumbnail';
                     thumbDiv.dataset.pageNum = pageNum;
-                    thumbDiv.style.minHeight = '160px'; // 懒加载时的灰色骨架高度
+                    thumbDiv.style.minHeight = '160px'; // Placeholder height for lazy loading
                     thumbDiv.onclick = () => togglePageSelection(pageNum, thumbDiv);
                     
                     const label = document.createElement('div');
@@ -320,7 +319,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
                     thumbDiv.appendChild(label);
                     grid.appendChild(thumbDiv);
 
-                    // 把生成的空骨架框交给观察者盯着
+                    // Observe the newly created placeholder
                     currentPdfObserver.observe(thumbDiv);
                 }
                 extractBtn.style.display = 'block';
@@ -339,7 +338,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             }
         }
 
-        // --- Merge PDFs Function (逻辑不变) ---
+        // --- Merge PDFs Function ---
         async function mergePDFs() {
             const files = selectedPdfFiles;
             const statusText = document.getElementById('mergeStatus');

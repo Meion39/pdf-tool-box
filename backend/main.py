@@ -35,7 +35,7 @@ def merge_pdfs(files: list[UploadFile] = File(...)):
     merger = PdfWriter()
     try:
         for file in files:
-            # 简单的后缀名校验
+            # Simple file extension validation
             if not file.filename.lower().endswith('.pdf'):
                 raise HTTPException(status_code=400, detail=f"'{file.filename}' is not a valid PDF.")
             merger.append(file.file)
@@ -96,7 +96,7 @@ def extract_pdf_pages(file: UploadFile = File(...), pages: str = Form(...)):
         writer = PdfWriter()
         total_pages = len(reader.pages)
         
-        # 解析用户输入的页码 (例如: "1, 3, 5-7")
+        # Parse user-input page string (e.g., "1, 3, 5-7")
         page_indices = set()
         for part in pages.split(','):
             part = part.strip()
@@ -106,7 +106,7 @@ def extract_pdf_pages(file: UploadFile = File(...), pages: str = Form(...)):
                 start_str, end_str = part.split('-')
                 start, end = int(start_str.strip()), int(end_str.strip())
                 if start > end:
-                    start, end = end, start  # 纠正大小顺序
+                    start, end = end, start  # Correct the order if start > end
                 for i in range(start, end + 1):
                     page_indices.add(i)
             else:
@@ -117,7 +117,7 @@ def extract_pdf_pages(file: UploadFile = File(...), pages: str = Form(...)):
             raise HTTPException(status_code=400, detail="No valid pages specified.")
 
         for p in sorted_pages:
-            idx = p - 1 # 用户输入的是 1-based 页码，我们需要转换为 0-based 索引
+            idx = p - 1 # User input is 1-based, convert to 0-based index
             if 0 <= idx < total_pages:
                 writer.add_page(reader.pages[idx])
             else:
