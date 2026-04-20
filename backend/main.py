@@ -200,3 +200,4 @@ def extract_pdf_pages(file: UploadFile = File(...), pages: str = Form(...)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal error during extraction.")
+    
