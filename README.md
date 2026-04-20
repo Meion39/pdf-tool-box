@@ -28,3 +28,5 @@ Simply open `frontend/index.html` in any modern web browser.
 
 ## 📄 License
 This project is open-source and available under the MIT License.
+
+ 
