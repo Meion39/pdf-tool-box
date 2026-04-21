@@ -21,57 +21,59 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
     <video autoplay muted loop id="background-video">
         <source src="111.mp4" type="video/mp4">
     </video>
-    <div class="header-title">📄 My PDF Toolbox</div>
 
-    <div class="nav-bar">
-        <button class="nav-btn active" onclick="switchView('merge-view', this)">Merge PDFs</button>
-        <button class="nav-btn" onclick="switchView('convert-view', this)">File to PDF</button>
-        <button class="nav-btn" onclick="switchView('extract-view', this)">Extract Pages</button>
+    <div class="content-wrapper">
+        <div class="header-title">📄 My PDF Toolbox</div>
+
+        <div class="nav-bar">
+            <button class="nav-btn active" onclick="switchView('merge-view', this)">Merge PDFs</button>
+            <button class="nav-btn" onclick="switchView('convert-view', this)">File to PDF</button>
+            <button class="nav-btn" onclick="switchView('extract-view', this)">Extract Pages</button>
+        </div>
+
+        <div class="main-content">
+            
+            <div id="merge-view" class="view active">
+                <h1 class="tool-header">Merge PDF Files</h1>
+                <p style="color: #aaa;">Combine multiple PDFs into a single document easily.</p>
+                <div id="mergeBox" class="tool-box">
+                    <label for="pdfFiles" class="file-input-label">Choose Files or Drag Here</label>
+                    <input type="file" id="pdfFiles" accept="application/pdf" multiple onchange="handleFileInput(event)">
+                    <p id="mergeDropHint" style="color: #888; margin-top: -10px; margin-bottom: 15px; display: none;">Drop your PDF files here!</p>
+                    <div id="fileListPreview" style="margin-bottom: 15px; max-height: 200px; overflow-y: auto;"></div>
+                    <button id="mergeBtn" class="action-btn" onclick="mergePDFs()">Start Merging</button>
+                    <p id="mergeStatus" class="status"></p>
+                </div>
+            </div>
+
+            <div id="convert-view" class="view">
+                <h1 class="tool-header">Convert Image to PDF</h1>
+                <p style="color: #aaa;">Convert Images (JPG, PNG, WEBP, etc.) into PDF.</p>
+                <div id="convertBox" class="tool-box">
+                    <label for="convertFile" class="file-input-label">Choose an Image File</label>
+                    <input type="file" id="convertFile" accept="image/*">
+                    <button id="convertBtn" class="action-btn" onclick="convertFile()">Convert to PDF</button>
+                    <p id="convertStatus" class="status"></p>
+                </div>
+            </div>
+
+            <div id="extract-view" class="view">
+                <h1 class="tool-header">Extract PDF Pages</h1>
+                <p style="color: #aaa;">Select a PDF to preview and click the thumbnails of the pages you want to extract.</p>
+                <div id="extractBox" class="tool-box" style="width: 100%; max-width: 650px;">
+                    <label for="extractFile" class="file-input-label">Choose a PDF File</label>
+                    <input type="file" id="extractFile" accept="application/pdf" onchange="loadPdfPreview(event)">
+                    <div id="pdfThumbnails" class="pdf-preview-grid"></div>
+                    <button id="extractBtn" class="action-btn" onclick="extractPages()" style="display: none;">Extract Selected Pages</button>
+                    <p id="extractStatus" class="status"></p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy;My PDF Toolbox. All rights reserved. | <a href="https://github.com/Meion39/pdf-tool-box" target="_blank">GitHub</a></p>
+        </footer>
     </div>
-
-    <div class="main-content">
-        
-        <div id="merge-view" class="view active">
-            <h1 class="tool-header">Merge PDF Files</h1>
-            <p style="color: #aaa;">Combine multiple PDFs into a single document easily.</p>
-            <div id="mergeBox" class="tool-box">
-                <label for="pdfFiles" class="file-input-label">Choose Files or Drag Here</label>
-                <input type="file" id="pdfFiles" accept="application/pdf" multiple onchange="handleFileInput(event)">
-                <p id="mergeDropHint" style="color: #888; margin-top: -10px; margin-bottom: 15px; display: none;">Drop your PDF files here!</p>
-                <div id="fileListPreview" style="margin-bottom: 15px; max-height: 200px; overflow-y: auto;"></div>
-                <button id="mergeBtn" class="action-btn" onclick="mergePDFs()">Start Merging</button>
-                <p id="mergeStatus" class="status"></p>
-            </div>
-        </div>
-
-        <div id="convert-view" class="view">
-            <h1 class="tool-header">Convert Image to PDF</h1>
-            <p style="color: #aaa;">Convert Images (JPG, PNG, WEBP, etc.) into PDF.</p>
-            <div id="convertBox" class="tool-box">
-                <label for="convertFile" class="file-input-label">Choose an Image File</label>
-                <input type="file" id="convertFile" accept="image/*">
-                <button id="convertBtn" class="action-btn" onclick="convertFile()">Convert to PDF</button>
-                <p id="convertStatus" class="status"></p>
-            </div>
-        </div>
-
-        <div id="extract-view" class="view">
-            <h1 class="tool-header">Extract PDF Pages</h1>
-            <p style="color: #aaa;">Select a PDF to preview and click the thumbnails of the pages you want to extract.</p>
-            <div id="extractBox" class="tool-box" style="width: 100%; max-width: 650px;">
-                <label for="extractFile" class="file-input-label">Choose a PDF File</label>
-                <input type="file" id="extractFile" accept="application/pdf" onchange="loadPdfPreview(event)">
-                <div id="pdfThumbnails" class="pdf-preview-grid"></div>
-                <button id="extractBtn" class="action-btn" onclick="extractPages()" style="display: none;">Extract Selected Pages</button>
-                <p id="extractStatus" class="status"></p>
-            </div>
-        </div>
-
-    </div>
-
-    <footer>
-        <p>&copy;My PDF Toolbox. All rights reserved. | <a href="https://github.com/Meion39/pdf-tool-box" target="_blank">GitHub</a></p>
-    </footer>
 
     <script src="script.js" defer></script>
 </body>

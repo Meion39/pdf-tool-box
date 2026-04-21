@@ -1,5 +1,14 @@
 /* Reset margins and set up full-screen flex layout. The body background is now a fallback. */
-body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); color: white; overflow-y: auto; }
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+    overflow-y: auto;
+}
+
+/* This wrapper holds all content and applies the flex layout, keeping it separate from the background. */
+.content-wrapper { display: flex; flex-direction: column; align-items: center; min-height: 100vh; width: 100%; position: relative; z-index: 1; }
 
 /* Gradient text for the main header */
 .header-title {
