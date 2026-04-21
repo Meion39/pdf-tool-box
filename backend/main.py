@@ -62,7 +62,7 @@ def convert_file_to_pdf(file: UploadFile = File(...)):
         original_name = file.filename.rsplit('.', 1)[0]
         output_filename = f"converted_{original_name}.pdf"
 
-        # --- 支持的图片格式拓展 ---
+        # --- Handle supported image formats ---
         if ext in ['png', 'jpg', 'jpeg', 'bmp', 'webp', 'tiff', 'gif']:
             image = Image.open(file.file)
             if image.mode in ("RGBA", "P"):
