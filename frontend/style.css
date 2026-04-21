@@ -74,7 +74,7 @@ footer a { color: #007acc; text-decoration: none; }
     min-width: 100%;
     min-height: 100%;
     z-index: -1; /* Place it behind all content */
-    object-fit: cover; /* 确保视频铺满整个背景 */
+    object-fit: contain; /* 确保视频内容完整显示 */
 }
 
 /* Video Loader Styles */
