@@ -13,13 +13,19 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
     <title>My PDF Toolbox</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
-        /* Reset margins and set up full-screen flex layout */
+        /* Reset margins and set up full-screen flex layout. The body background is now a fallback. */
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); color: white; overflow-y: auto; }
-        
+
+        /* Gradient text for the main header */
+        .header-title {
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
         /* Header and Nav Styles */
         .header-title { font-size: 36px; font-weight: bold; margin-top: 50px; margin-bottom: 25px; letter-spacing: 1px; text-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .nav-bar { display: flex; gap: 10px; background: rgba(255, 255, 255, 0.05); padding: 10px 20px; border-radius: 50px; backdrop-filter: blur(10px); margin-bottom: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); flex-wrap: wrap; justify-content: center;}
-        .nav-btn { background: transparent; border: none; color: #ccc; padding: 12px 24px; font-size: 16px; cursor: pointer; transition: 0.3s; border-radius: 30px; font-weight: 500; }
+        .nav-btn { background: transparent; border: none; color: #ccc; padding: 12px 24px; font-size: 16px; cursor: pointer; transition: 0.3s; border-radius: 30px; font-weight: 500; z-index: 1; }
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.1); color: #fff; }
         .nav-btn.active { background-color: #007acc; color: #fff; box-shadow: 0 4px 15px rgba(0, 122, 204, 0.4); }
         
@@ -34,16 +40,33 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
         /* Tool Box Styles (from previous step) */
         .tool-header { margin-bottom: 10px; font-size: 28px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .tool-box { border: 2px dashed rgba(255, 255, 255, 0.2); padding: 40px; width: 100%; max-width: 500px; background-color: rgba(30, 30, 30, 0.6); border-radius: 16px; margin-top: 20px; transition: all 0.3s; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); box-sizing: border-box;}
-        .tool-box.dragover { background-color: rgba(50, 50, 50, 0.9); border-color: #007acc; transform: scale(1.02); }
-        input[type="file"] { margin-bottom: 15px; width: 100%; color: #ccc;}
+        .tool-box.dragover { background-color: rgba(50, 50, 50, 0.9); border-color: #007acc; transform: scale(1.02); }        
+        /* Custom File Input */
+        input[type="file"] { display: none; }
+        .file-input-label { display: inline-block; padding: 12px 20px; margin-bottom: 15px; cursor: pointer; background-color: rgba(255, 255, 255, 0.1); color: #ddd; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; transition: 0.2s; width: calc(100% - 40px); }
+        .file-input-label:hover { background-color: rgba(255, 255, 255, 0.2); border-color: #007acc; }
         button.action-btn { margin-top: 15px; padding: 12px 20px; cursor: pointer; background-color: #007acc; color: white; border: none; border-radius: 6px; font-size: 16px; width: 100%; transition: 0.2s;}
         button.action-btn:hover { background-color: #005f9e; }
         button.action-btn:disabled { background-color: #555; cursor: not-allowed; opacity: 0.7; }
         .status { margin-top: 20px; font-weight: bold; min-height: 20px; font-size: 14px;}
+        /* Loading spinner for buttons */
+        .action-btn.loading { position: relative; pointer-events: none; }
+        .action-btn.loading::after {
+            content: ''; position: absolute; width: 16px; height: 16px; top: 50%; left: 50%; margin-left: -8px; margin-top: -8px;
+            border: 2px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .file-item { padding: 10px; margin-bottom: 8px; background: #3a3a3a; border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: 0.2s; font-size: 13px; color: #ddd;}
+        .file-item:hover { background-color: #4a4a4a; }
         .file-item:active { cursor: grabbing; }
-        .remove-btn { color: #f44336; cursor: pointer; padding: 0 5px; font-weight: bold; font-size: 14px;}
-        .remove-btn:hover { color: #ff6659; }
+        .remove-btn {
+            width: 20px; height: 20px; cursor: pointer;
+            background-color: #f44336;
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E");
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E");
+            mask-size: contain; -webkit-mask-size: contain; transition: background-color 0.2s;
+        }
+        .remove-btn:hover { background-color: #ff6659; }
 
         /* PDF Preview Grid Styles */
         .pdf-preview-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-top: 20px; max-height: 400px; overflow-y: auto; padding: 15px; background: #222; border-radius: 8px; border: 1px solid #444; }
@@ -53,10 +76,24 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
         .page-thumbnail.selected::after { content: '✔'; position: absolute; top: 8px; right: 8px; background: #007acc; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
         .page-thumbnail canvas { width: 100%; height: auto; display: block; }
         .page-number-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); color: white; text-align: center; font-size: 13px; padding: 4px 0; font-weight: bold;}
+
+        /* Footer Styles */
+        footer { margin-top: 50px; padding: 20px; color: #aaa; font-size: 14px; text-align: center; width: 100%; max-width: 800px; }
+        footer a { color: #007acc; text-decoration: none; }
+
+        /* Dynamic Background Container */
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1; /* Place it behind all content */
+        }
     </style>
 </head>
 <body>
-
+    <div id="particles-js"></div>
     <div class="header-title">📄 My PDF Toolbox</div>
 
     <div class="nav-bar">
@@ -71,7 +108,9 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             <h1 class="tool-header">Merge PDF Files</h1>
             <p style="color: #aaa;">Combine multiple PDFs into a single document easily.</p>
             <div id="mergeBox" class="tool-box">
+                <label for="pdfFiles" class="file-input-label">Choose Files or Drag Here</label>
                 <input type="file" id="pdfFiles" accept="application/pdf" multiple onchange="handleFileInput(event)">
+                <p id="mergeDropHint" style="color: #888; margin-top: -10px; margin-bottom: 15px; display: none;">Drop your PDF files here!</p>
                 <div id="fileListPreview" style="margin-bottom: 15px; max-height: 200px; overflow-y: auto;"></div>
                 <button id="mergeBtn" class="action-btn" onclick="mergePDFs()">Start Merging</button>
                 <p id="mergeStatus" class="status"></p>
@@ -82,6 +121,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             <h1 class="tool-header">Convert Image to PDF</h1>
             <p style="color: #aaa;">Convert Images (JPG, PNG, WEBP, etc.) into PDF.</p>
             <div id="convertBox" class="tool-box">
+                <label for="convertFile" class="file-input-label">Choose an Image File</label>
                 <input type="file" id="convertFile" accept="image/*">
                 <button id="convertBtn" class="action-btn" onclick="convertFile()">Convert to PDF</button>
                 <p id="convertStatus" class="status"></p>
@@ -92,6 +132,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             <h1 class="tool-header">Extract PDF Pages</h1>
             <p style="color: #aaa;">Select a PDF to preview and click the thumbnails of the pages you want to extract.</p>
             <div id="extractBox" class="tool-box" style="width: 100%; max-width: 650px;">
+                <label for="extractFile" class="file-input-label">Choose a PDF File</label>
                 <input type="file" id="extractFile" accept="application/pdf" onchange="loadPdfPreview(event)">
                 <div id="pdfThumbnails" class="pdf-preview-grid"></div>
                 <button id="extractBtn" class="action-btn" onclick="extractPages()" style="display: none;">Extract Selected Pages</button>
@@ -100,6 +141,14 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
         </div>
 
     </div>
+
+    <footer>
+        <p>&copy;My PDF Toolbox. All rights reserved. | <a href="https://github.com/Meion39/pdf-tool-box" target="_blank">GitHub Repo</a></p>
+    </footer>
+
+
+    <!-- tsParticles library for dynamic background -->
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
 
     <script>
         // --- Global Configuration ---
@@ -132,12 +181,48 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
 
         // --- Drag and Drop Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize particles.js
+            tsParticles.load("particles-js", {
+                background: {
+                    color: {
+                        value: "#1a2a33" // Match the site's dark theme
+                    }
+                },
+                fpsLimit: 60,
+                interactivity: {
+                    events: {
+                        onHover: {
+                            enable: true,
+                            mode: "repulse"
+                        },
+                        resize: true
+                    },
+                    modes: {
+                        repulse: {
+                            distance: 100,
+                            duration: 0.4
+                        }
+                    }
+                },
+                particles: {
+                    color: { value: "#ffffff" },
+                    links: { color: "#ffffff", distance: 150, enable: true, opacity: 0.2, width: 1 },
+                    move: { direction: "none", enable: true, outModes: "out", random: false, speed: 1, straight: false },
+                    number: { density: { enable: true, area: 800 }, value: 80 },
+                    opacity: { value: 0.2 },
+                    shape: { type: "circle" },
+                    size: { value: { min: 1, max: 3 } }
+                },
+                detectRetina: true
+            });
+
             setupDragAndDrop('mergeBox', (files) => {
                 addFilesToMerge(files);
             });
             
             setupDragAndDrop('convertBox', (files) => {
                 const fileInput = document.getElementById('convertFile');
+                if (!files || files.length === 0) return;
                 const dt = new DataTransfer();
                 dt.items.add(files[0]); // Only single file conversion is supported
                 fileInput.files = dt.files;
@@ -145,6 +230,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
 
             setupDragAndDrop('extractBox', (files) => {
                 const fileInput = document.getElementById('extractFile');
+                if (!files || files.length === 0) return;
                 const dt = new DataTransfer();
                 if (files[0].type === 'application/pdf') {
                     dt.items.add(files[0]); fileInput.files = dt.files;
@@ -155,16 +241,31 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
 
         function setupDragAndDrop(boxId, dropHandler) {
             const box = document.getElementById(boxId);
+            const dropHint = document.getElementById(boxId.replace('Box', 'DropHint')); // Get hint for mergeBox
+
             box.addEventListener('dragover', (e) => { 
                 e.preventDefault(); 
                 box.classList.add('dragover'); 
+                if (dropHint) dropHint.style.display = 'block';
             });
-            box.addEventListener('dragleave', () => box.classList.remove('dragover'));
+            box.addEventListener('dragleave', () => {
+                box.classList.remove('dragover');
+                if (dropHint) dropHint.style.display = 'none';
+            });
             box.addEventListener('drop', (e) => {
                 e.preventDefault();
                 box.classList.remove('dragover');
+                if (dropHint) dropHint.style.display = 'none';
                 if (e.dataTransfer.files.length > 0) {
                     dropHandler(e.dataTransfer.files);
+                }
+            });
+            // Handle dragenter to show hint immediately
+            box.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                if (e.dataTransfer.types && (Array.from(e.dataTransfer.types).includes('Files') || Array.from(e.dataTransfer.types).includes('text/uri-list'))) {
+                    box.classList.add('dragover');
+                    if (dropHint) dropHint.style.display = 'block';
                 }
             });
         }
@@ -191,6 +292,11 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             renderMergeList();
         }
 
+        function clearMergeList() {
+            selectedPdfFiles = [];
+            renderMergeList();
+        }
+
         // --- Render Draggable Sortable List ---
         function renderMergeList() {
             const preview = document.getElementById('fileListPreview');
@@ -200,13 +306,17 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             }
             
             let html = '<ul style="margin: 0; padding: 0; list-style: none;">';
-            selectedPdfFiles.forEach((file, index) => {
-                html += `
-                    <li class="file-item" draggable="true" data-index="${index}">
-                        <span><span style="color:#888;margin-right:10px;cursor:grab;">☰</span>${file.name}</span>
-                        <span class="remove-btn" onclick="removePdf(${index})">✖</span>
-                    </li>
-                `;
+            selectedPdfFiles.forEach((file, index) => { // Assuming file is a File object
+                if (file instanceof File) { // Ensure it's a File object
+                    html += `
+                        <li class="file-item" draggable="true" data-index="${index}">
+                            <span style="flex-grow: 1;"><span style="color:#888;margin-right:10px;cursor:grab;">☰</span>${file.name}</span>
+                            <div class="remove-btn" onclick="removePdf(${index})"></div>
+                        </li>
+                    `;
+                } else {
+                    console.error("Invalid item in selectedPdfFiles:", file);
+                }
             });
             html += '</ul>';
             preview.innerHTML = html;
@@ -240,6 +350,11 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
                     this.style.opacity = '1';
                 });
             });
+
+            // Add clear all button if files exist
+            if (selectedPdfFiles.length > 0) {
+                preview.innerHTML += '<button class="action-btn" style="margin-top: 15px; background-color: #f44336;" onclick="clearMergeList()">Clear All Files</button>';
+            }
         }
 
         // --- Global Intersection Observer & Renderer ---
@@ -345,13 +460,14 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             const mergeBtn = document.getElementById('mergeBtn');
 
             if (files.length < 2) {
-                alert("Please select at least 2 PDF files to merge.");
+                statusText.innerText = "Please select at least 2 PDF files to merge.";
+                statusText.style.color = "#f44336";
                 return;
             }
 
             const formData = new FormData();
             for (let i = 0; i < files.length; i++) {
-                formData.append("files", files[i]); 
+                formData.append("files", files[i]);
             }
 
             statusText.innerText = "Merging in progress, please wait...";
@@ -359,6 +475,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             
             mergeBtn.disabled = true;
             mergeBtn.innerText = "Processing...";
+            mergeBtn.classList.add('loading');
 
             try {
                 const response = await fetch(`${API_BASE_URL}/merge/`, {
@@ -391,6 +508,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             } finally {
                 mergeBtn.disabled = false;
                 mergeBtn.innerText = "Start Merging";
+                mergeBtn.classList.remove('loading');
             }
         }
 
@@ -414,6 +532,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             
             convertBtn.disabled = true;
             convertBtn.innerText = "Converting...";
+            convertBtn.classList.add('loading');
 
             try {
                 const response = await fetch(`${API_BASE_URL}/convert/`, {
@@ -448,6 +567,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             } finally {
                 convertBtn.disabled = false;
                 convertBtn.innerText = "Convert to PDF";
+                convertBtn.classList.remove('loading');
             }
         }
 
@@ -476,6 +596,7 @@ Features include drag-and-drop, glassmorphism UI, and lazy-loading previews.
             
             extractBtn.disabled = true;
             extractBtn.innerText = "Extracting...";
+            extractBtn.classList.add('loading');
 
             try {
                 const response = await fetch(`${API_BASE_URL}/extract/`, {
